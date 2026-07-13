@@ -80,7 +80,7 @@ export default async function Home() {
               const proxyUrl = `/api/view?url=${encodeURIComponent(file.url)}`;
               const displayName = file.pathname.split('/').pop();
               return (
-                
+                <a
                   className="card"
                   key={file.pathname}
                   href={proxyUrl}
