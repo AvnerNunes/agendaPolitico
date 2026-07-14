@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readState, writeState, markAwaiting, confirmLocation, saveMedia } from '@/lib/blob-state';
-import { sendWhatsAppText } from '@/lib/whapi';
+import { sendWhatsAppText, getGroupParticipants } from '@/lib/whapi';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -18,31 +18,43 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ignored: true, reason: 'sem mensagem no payload' });
   }
 
-  const allowedPhone = process.env.ALLOWED_PHONE;
+  const allowedGroupId = process.env.ALLOWED_GROUP_ID;
   const phone = message.from;
-  const isGroup = typeof message.chat_id === 'string' && message.chat_id.endsWith('@g.us');
+  const isFromAllowedGroup = message.chat_id === allowedGroupId;
+
+  let authorized = isFromAllowedGroup;
+
+  // Se não veio do grupo, só autoriza se quem mandou for membro do grupo
+  if (!authorized && allowedGroupId) {
+    const participants = await getGroupParticipants(allowedGroupId);
+    authorized = participants.includes(phone);
+  }
 
   console.log('[whatsapp] mensagem recebida', {
     type: message.type,
     phone,
-    allowedPhone,
-    isGroup,
+    chatId: message.chat_id,
+    allowedGroupId,
+    isFromAllowedGroup,
     fromMe: message.from_me,
-    match: phone === allowedPhone,
+    authorized,
   });
 
-  // Ignora grupos, mensagens enviadas por nós mesmos, e qualquer número não autorizado
-  if (isGroup || message.from_me || !allowedPhone || phone !== allowedPhone) {
-    console.log('[whatsapp] ignorado pelo filtro de número/grupo/fromMe');
+  // Ignora mensagens enviadas por nós mesmos, e qualquer remetente não autorizado
+  if (message.from_me || !authorized) {
+    console.log('[whatsapp] ignorado: não autorizado');
     return NextResponse.json({ ignored: true });
   }
+
+  // Se veio do grupo, responde no grupo (todo mundo vê); se veio no privado, responde só pra pessoa
+  const replyTo = isFromAllowedGroup ? message.chat_id : phone;
 
   // Mensagem de texto -> confirma local
   if (message.type === 'text' && message.text?.body) {
     const { local, movedCount } = await confirmLocation(message.text.body);
     const readable = local.replace(/-/g, ' ');
     const extra = movedCount > 0 ? ` (${movedCount} arquivo${movedCount > 1 ? 's' : ''} organizado${movedCount > 1 ? 's' : ''})` : '';
-    await sendWhatsAppText(phone, `Local definido: ${readable} ✅${extra}`);
+    await sendWhatsAppText(replyTo, `Local definido: ${readable} ✅${extra}`);
     return NextResponse.json({ ok: true, local, movedCount });
   }
 
@@ -76,7 +88,7 @@ export async function POST(request: NextRequest) {
       const question = state.local
         ? `As fotos são de ${state.local.replace(/-/g, ' ')} ou é um novo local? Me diga o nome do local.`
         : 'De que local são essas fotos/vídeos?';
-      await sendWhatsAppText(phone, question);
+      await sendWhatsAppText(replyTo, question);
       return NextResponse.json({ pending: true });
     }
 
