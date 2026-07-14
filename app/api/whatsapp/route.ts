@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
   const message = body?.messages?.[0];
 
   if (!message) {
+    console.log('[whatsapp] payload sem mensagem, ignorando', JSON.stringify(body).slice(0, 300));
     return NextResponse.json({ ignored: true, reason: 'sem mensagem no payload' });
   }
 
@@ -21,8 +22,18 @@ export async function POST(request: NextRequest) {
   const phone = message.from;
   const isGroup = typeof message.chat_id === 'string' && message.chat_id.endsWith('@g.us');
 
+  console.log('[whatsapp] mensagem recebida', {
+    type: message.type,
+    phone,
+    allowedPhone,
+    isGroup,
+    fromMe: message.from_me,
+    match: phone === allowedPhone,
+  });
+
   // Ignora grupos, mensagens enviadas por nós mesmos, e qualquer número não autorizado
   if (isGroup || message.from_me || !allowedPhone || phone !== allowedPhone) {
+    console.log('[whatsapp] ignorado pelo filtro de número/grupo/fromMe');
     return NextResponse.json({ ignored: true });
   }
 
