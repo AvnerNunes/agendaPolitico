@@ -81,11 +81,11 @@ export async function POST(request: NextRequest) {
     const originalName = file.pathname.split('/').pop()!.replace(/^\d+-/, '');
     const newPath = `${local}/${today}/${originalName}`;
 
-    await put(newPath, upstream.body, {
+   await put(newPath, upstream.body, {
       access: 'private',
       addRandomSuffix: false,
       allowOverwrite: true,
-      contentType: file.contentType,
+      contentType: upstream.headers.get('content-type') || 'application/octet-stream',
     });
     await del(file.url);
     movedCount += 1;
