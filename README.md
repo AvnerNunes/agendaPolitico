@@ -1,14 +1,43 @@
-# Zeca eventos — acervo
+# Zeca eventos — agenda político
 
-Site que lista, organizado por local, os arquivos guardados no Vercel Blob `zeca-eventos`.
+App que recebe fotos e vídeos de eventos via WhatsApp, organiza automaticamente por local e data no Vercel Blob, e disponibiliza num site pra visualização e download.
 
-## Como colocar no ar (sem usar terminal)
+## Estrutura
 
-1. Crie um repositório novo no GitHub (github.com → "New repository"). Pode chamar de `zeca-eventos-viewer`.
-2. Na página do repositório, clique em **Add file → Upload files** e arraste todos os arquivos e pastas deste projeto (mantendo a estrutura de pastas `app/`, `app/api/view/`).
-3. Confirme o commit.
-4. No Vercel, clique em **Add New → Project**, escolha o repositório que você acabou de criar e clique em **Import**.
-5. Antes de clicar em "Deploy", vá em **Environment Variables** e confirme que a variável `BLOB_READ_WRITE_TOKEN` está presente (se o projeto já estava conectado ao store `zeca-eventos`, ela é herdada automaticamente; senão, cole o valor do token gerado no painel do Blob).
-6. Clique em **Deploy**. Em cerca de um minuto o site fica no ar num link tipo `zeca-eventos-viewer.vercel.app`.
+- `app/page.tsx` — site que lista os arquivos organizados por local
+- `app/api/whatsapp/route.ts` — recebe o webhook do Z-API e decide tudo (confirma local, organiza mídia, ou pergunta)
+- `app/api/state/route.ts` — lê/escreve o "local ativo" (usado internamente e pra testes manuais)
+- `app/api/upload/route.ts` — upload manual protegido por senha (útil pra testes)
+- `app/api/view/route.ts` — serve os arquivos privados do Blob (visualização e download)
+- `lib/blob-state.ts` — lógica compartilhada de memória do local ativo
+- `lib/zapi.ts` — envio de mensagens de volta pro WhatsApp via Z-API
 
-Sempre que o robô (n8n) subir um arquivo novo no formato `local/data/arquivo.ext`, ele aparece automaticamente aqui agrupado por local.
+## Rodando localmente
+
+```bash
+npm install
+cp .env.local.example .env.local
+# preencha o .env.local com os valores reais
+npm run dev
+```
+
+Abra http://localhost:3000
+
+## Deploy
+
+Esse projeto já está conectado ao Vercel. Qualquer `git push` pra branch `main` dispara um deploy automático.
+
+Variáveis de ambiente necessárias no Vercel (Settings → Environment Variables):
+- `BLOB_READ_WRITE_TOKEN`
+- `UPLOAD_SECRET`
+- `ALLOWED_PHONE`
+- `ZAPI_INSTANCE_ID`
+- `ZAPI_TOKEN`
+- `ZAPI_CLIENT_TOKEN`
+
+## Webhook do Z-API
+
+No painel do Z-API, em Webhooks → "Ao receber", configure:
+```
+https://SEU-DOMINIO.vercel.app/api/whatsapp
+```
