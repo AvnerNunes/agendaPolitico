@@ -5,12 +5,12 @@ App que recebe fotos e vídeos de eventos via WhatsApp, organiza automaticamente
 ## Estrutura
 
 - `app/page.tsx` — site que lista os arquivos organizados por local
-- `app/api/whatsapp/route.ts` — recebe o webhook do Z-API e decide tudo (confirma local, organiza mídia, ou pergunta)
+- `app/api/whatsapp/route.ts` — recebe o webhook da Whapi Cloud e decide tudo (confirma local, organiza mídia, ou pergunta)
 - `app/api/state/route.ts` — lê/escreve o "local ativo" (usado internamente e pra testes manuais)
 - `app/api/upload/route.ts` — upload manual protegido por senha (útil pra testes)
 - `app/api/view/route.ts` — serve os arquivos privados do Blob (visualização e download)
 - `lib/blob-state.ts` — lógica compartilhada de memória do local ativo
-- `lib/zapi.ts` — envio de mensagens de volta pro WhatsApp via Z-API
+- `lib/whapi.ts` — envio de mensagens de volta pro WhatsApp via Whapi Cloud
 
 ## Rodando localmente
 
@@ -31,13 +31,12 @@ Variáveis de ambiente necessárias no Vercel (Settings → Environment Variable
 - `BLOB_READ_WRITE_TOKEN`
 - `UPLOAD_SECRET`
 - `ALLOWED_PHONE`
-- `ZAPI_INSTANCE_ID`
-- `ZAPI_TOKEN`
-- `ZAPI_CLIENT_TOKEN`
+- `WHAPI_TOKEN`
 
-## Webhook do Z-API
+## Webhook da Whapi Cloud
 
-No painel do Z-API, em Webhooks → "Ao receber", configure:
+No painel da Whapi Cloud, nas configurações do canal, em Webhooks, configure a URL:
 ```
 https://SEU-DOMINIO.vercel.app/api/whatsapp
 ```
+E habilite o evento "messages" (post). Habilite também "Auto Download" pra imagem e vídeo, senão o link do arquivo não vem no webhook.

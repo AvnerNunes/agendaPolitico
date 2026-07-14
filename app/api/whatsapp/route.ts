@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readState, writeState, markAwaiting, confirmLocation, saveMedia } from '@/lib/blob-state';
-import { sendWhatsAppText } from '@/lib/zapi';
+import { sendWhatsAppText } from '@/lib/whapi';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -11,19 +11,24 @@ function extFromMime(mimeType: string | undefined) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
+  const message = body?.messages?.[0];
+
+  if (!message) {
+    return NextResponse.json({ ignored: true, reason: 'sem mensagem no payload' });
+  }
 
   const allowedPhone = process.env.ALLOWED_PHONE;
-  const phone = body?.phone;
+  const phone = message.from;
+  const isGroup = typeof message.chat_id === 'string' && message.chat_id.endsWith('@g.us');
 
   // Ignora grupos, mensagens enviadas por nós mesmos, e qualquer número não autorizado
-  if (body?.isGroup || body?.fromMe || !allowedPhone || phone !== allowedPhone) {
+  if (isGroup || message.from_me || !allowedPhone || phone !== allowedPhone) {
     return NextResponse.json({ ignored: true });
   }
 
   // Mensagem de texto -> confirma local
-  const textMessage = body?.text?.message;
-  if (textMessage) {
-    const { local, movedCount } = await confirmLocation(textMessage);
+  if (message.type === 'text' && message.text?.body) {
+    const { local, movedCount } = await confirmLocation(message.text.body);
     const readable = local.replace(/-/g, ' ');
     const extra = movedCount > 0 ? ` (${movedCount} arquivo${movedCount > 1 ? 's' : ''} organizado${movedCount > 1 ? 's' : ''})` : '';
     await sendWhatsAppText(phone, `Local definido: ${readable} ✅${extra}`);
@@ -31,12 +36,15 @@ export async function POST(request: NextRequest) {
   }
 
   // Mídia (imagem ou vídeo) -> organiza ou pergunta
-  const media = body?.image || body?.video;
-  if (media) {
-    const mediaUrl = body.image?.imageUrl || body.video?.videoUrl;
-    const mimeType = body.image?.mimeType || body.video?.mimeType;
+  if (message.type === 'image' || message.type === 'video') {
+    const media = message.image || message.video;
+    const mediaUrl = media?.link;
+    const mimeType = media?.mime_type;
+
     if (!mediaUrl) {
-      return NextResponse.json({ error: 'sem url de mídia' }, { status: 400 });
+      return NextResponse.json({
+        error: 'sem link de download (verifique se o Auto Download está ativado nas configurações do canal Whapi)',
+      }, { status: 400 });
     }
 
     const state = await readState();
@@ -49,7 +57,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'falha ao baixar mídia' }, { status: 502 });
     }
     const buffer = await mediaRes.arrayBuffer();
-    const filename = `${body.messageId || Date.now()}.${extFromMime(mimeType)}`;
+    const filename = `${message.id || Date.now()}.${extFromMime(mimeType)}`;
 
     if (needsQuestion) {
       await saveMedia(buffer, filename, mimeType || 'application/octet-stream', { direct: false });
