@@ -34,6 +34,7 @@ export default async function Home() {
   for (const blob of blobs) {
     const segments = blob.pathname.split('/');
     const folderName = segments.length > 1 ? segments[0] : 'sem-local';
+    if (folderName.startsWith('_')) continue;
     if (!folders.has(folderName)) folders.set(folderName, []);
     folders.get(folderName)!.push(blob);
   }
@@ -77,28 +78,27 @@ export default async function Home() {
               const ext = extOf(file.pathname);
               const isImage = IMAGE_EXT.includes(ext);
               const isVideo = VIDEO_EXT.includes(ext);
-              const proxyUrl = `/api/view?url=${encodeURIComponent(file.url)}`;
-              const displayName = file.pathname.split('/').pop();
+              const displayName = file.pathname.split('/').pop() || 'arquivo';
+              const viewUrl = `/api/view?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(displayName)}`;
+              const downloadUrl = `/api/view?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(displayName)}&download=1`;
               return (
-                <a
-                  className="card"
-                  key={file.pathname}
-                  href={proxyUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <div className="thumb">
+                <div className="card" key={file.pathname}>
+                  <a className="thumb" href={viewUrl} target="_blank" rel="noreferrer">
                     {isImage ? (
-                      <img src={proxyUrl} alt={displayName} loading="lazy" />
+                      <img src={viewUrl} alt={displayName} loading="lazy" />
                     ) : (
                       <span className="glyph">{isVideo ? 'VÍDEO' : ext.toUpperCase() || 'ARQUIVO'}</span>
                     )}
-                  </div>
+                  </a>
                   <div className="card-meta">
                     <span className="fname">{displayName}</span>
                     <span className="fdate">{formatDate(file.uploadedAt as unknown as string)}</span>
                   </div>
-                </a>
+                  <div className="card-actions">
+                    <a href={viewUrl} target="_blank" rel="noreferrer">Abrir</a>
+                    <a href={downloadUrl} download={displayName}>Baixar</a>
+                  </div>
+                </div>
               );
             })}
           </div>
