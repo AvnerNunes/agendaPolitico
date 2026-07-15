@@ -96,6 +96,8 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+.folder {
   margin-bottom: 2.5rem;
   border: 1px solid var(--border);
   border-radius: 10px;
