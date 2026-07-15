@@ -1,4 +1,4 @@
-export async function sendWhatsAppText(to: string, message: string) {
+export async function sendWhatsAppText(to: string, message: string, quotedMessageId?: string) {
   const token = process.env.WHAPI_TOKEN;
 
   if (!token) {
@@ -12,7 +12,11 @@ export async function sendWhatsAppText(to: string, message: string) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ to, body: message }),
+    body: JSON.stringify({
+      to,
+      body: message,
+      ...(quotedMessageId ? { quoted: quotedMessageId } : {}),
+    }),
   });
 }
 

@@ -3,11 +3,15 @@ import { put, get, list, del } from '@vercel/blob';
 const STATE_PATH = '_state/current.json';
 const PENDING_PREFIX = '_pending/';
 
-export type BotState = {
+export type SenderState = {
   local: string | null;
   updatedAt: string | null;
   awaiting: boolean;
 };
+
+type StateMap = Record<string, SenderState>;
+
+const EMPTY_SENDER_STATE: SenderState = { local: null, updatedAt: null, awaiting: false };
 
 export function slugify(text: string) {
   return text
@@ -19,18 +23,18 @@ export function slugify(text: string) {
     .replace(/(^-|-$)/g, '');
 }
 
-export async function readState(): Promise<BotState> {
+async function readStateMap(): Promise<StateMap> {
   try {
     const response = await get(STATE_PATH, { access: 'private' });
     const text = await new Response(response.stream).text();
-    return JSON.parse(text) as BotState;
+    return JSON.parse(text) as StateMap;
   } catch {
-    return { local: null, updatedAt: null, awaiting: false };
+    return {};
   }
 }
 
-export async function writeState(state: BotState) {
-  await put(STATE_PATH, JSON.stringify(state), {
+async function writeStateMap(map: StateMap) {
+  await put(STATE_PATH, JSON.stringify(map), {
     access: 'private',
     addRandomSuffix: false,
     allowOverwrite: true,
@@ -38,20 +42,38 @@ export async function writeState(state: BotState) {
   });
 }
 
-export async function markAwaiting() {
-  const state = await readState();
-  await writeState({ ...state, awaiting: true });
+/** Estado do local ativo, controlado individualmente por número de telefone. */
+export async function getSenderState(phone: string): Promise<SenderState> {
+  const map = await readStateMap();
+  return map[phone] || EMPTY_SENDER_STATE;
 }
 
-/** Confirma um novo local e move qualquer arquivo pendente pra pasta certa. */
-export async function confirmLocation(rawLocal: string) {
+export async function markAwaiting(phone: string) {
+  const map = await readStateMap();
+  map[phone] = { ...(map[phone] || EMPTY_SENDER_STATE), awaiting: true };
+  await writeStateMap(map);
+}
+
+/** Atualiza só o "relógio" (usado quando uma mídia é salva direto, sem perguntar). */
+export async function touchSenderState(phone: string) {
+  const map = await readStateMap();
+  map[phone] = { ...(map[phone] || EMPTY_SENDER_STATE), updatedAt: new Date().toISOString() };
+  await writeStateMap(map);
+}
+
+/** Confirma um novo local pra esse número, e move os arquivos pendentes DELE (só dele). */
+export async function confirmLocation(phone: string, rawLocal: string) {
   const local = slugify(rawLocal);
   const today = new Date().toISOString().slice(0, 10);
 
-  const { blobs: pending } = await list({ prefix: PENDING_PREFIX });
-  let movedCount = 0;
+  const { blobs: allPending } = await list({ prefix: PENDING_PREFIX });
+  const mine = allPending.filter((file) => {
+    const name = file.pathname.slice(PENDING_PREFIX.length); // "<timestamp>-<phone>_<id>.ext"
+    return name.includes(`-${phone}_`);
+  });
 
-  for (const file of pending) {
+  let movedCount = 0;
+  for (const file of mine) {
     const upstream = await fetch(file.url, {
       headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
     });
@@ -70,8 +92,24 @@ export async function confirmLocation(rawLocal: string) {
     movedCount += 1;
   }
 
-  await writeState({ local, updatedAt: new Date().toISOString(), awaiting: false });
+  const map = await readStateMap();
+  map[phone] = { local, updatedAt: new Date().toISOString(), awaiting: false };
+  await writeStateMap(map);
+
   return { local, movedCount };
+}
+
+/** Usado ao renomear uma pasta no site: atualiza a referência em todos os números que apontavam pra ela. */
+export async function renameLocationEverywhere(oldName: string, newName: string) {
+  const map = await readStateMap();
+  let changed = false;
+  for (const phone of Object.keys(map)) {
+    if (map[phone].local === oldName) {
+      map[phone] = { ...map[phone], local: newName };
+      changed = true;
+    }
+  }
+  if (changed) await writeStateMap(map);
 }
 
 /** Salva uma mídia nova. Se `direct` for true, vai direto pra pasta final; senão fica em _pending/. */

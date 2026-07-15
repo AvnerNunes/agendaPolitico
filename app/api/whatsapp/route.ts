@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readState, writeState, markAwaiting, confirmLocation, saveMedia } from '@/lib/blob-state';
+import { getSenderState, touchSenderState, markAwaiting, confirmLocation, saveMedia } from '@/lib/blob-state';
 import { sendWhatsAppText, getGroupParticipants } from '@/lib/whapi';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -49,16 +49,16 @@ export async function POST(request: NextRequest) {
   // Se veio do grupo, responde no grupo (todo mundo vê); se veio no privado, responde só pra pessoa
   const replyTo = isFromAllowedGroup ? message.chat_id : phone;
 
-  // Mensagem de texto -> confirma local
+  // Mensagem de texto -> confirma local (o controle é individual, por número de quem mandou)
   if (message.type === 'text' && message.text?.body) {
-    const { local, movedCount } = await confirmLocation(message.text.body);
+    const { local, movedCount } = await confirmLocation(phone, message.text.body);
     const readable = local.replace(/-/g, ' ');
     const extra = movedCount > 0 ? ` (${movedCount} arquivo${movedCount > 1 ? 's' : ''} organizado${movedCount > 1 ? 's' : ''})` : '';
-    await sendWhatsAppText(replyTo, `Local definido: ${readable} ✅${extra}`);
+    await sendWhatsAppText(replyTo, `Local definido: ${readable} ✅${extra}`, message.id);
     return NextResponse.json({ ok: true, local, movedCount });
   }
 
-  // Mídia (imagem ou vídeo) -> organiza ou pergunta
+  // Mídia (imagem ou vídeo) -> organiza ou pergunta, controlado individualmente por número
   if (message.type === 'image' || message.type === 'video') {
     const media = message.image || message.video;
     const mediaUrl = media?.link;
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const state = await readState();
+    const state = await getSenderState(phone);
     const updatedAtMs = state.updatedAt ? new Date(state.updatedAt).getTime() : 0;
     const hoursSince = Date.now() - updatedAtMs;
     const needsQuestion = !state.local || hoursSince > ONE_HOUR_MS;
@@ -85,13 +85,13 @@ export async function POST(request: NextRequest) {
     if (needsQuestion) {
       await saveMedia(buffer, filename, mimeType || 'application/octet-stream', { direct: false });
 
-      // Só pergunta se ainda não tiver perguntado (evita repetir a pergunta pra cada mídia do mesmo lote)
+      // Só pergunta se ainda não tiver perguntado pra esse número (evita repetir a pergunta pra cada mídia do mesmo lote)
       if (!state.awaiting) {
-        await markAwaiting();
+        await markAwaiting(phone);
         const question = state.local
-          ? `As fotos são de ${state.local.replace(/-/g, ' ')} ou é um novo local? Me diga o nome do local.`
+          ? `As mídias enviadas ainda são do último local informado (${state.local.replace(/-/g, ' ')})? Me diga o nome do local.`
           : 'De que local são essas fotos/vídeos?';
-        await sendWhatsAppText(replyTo, question);
+        await sendWhatsAppText(replyTo, question, message.id);
       }
       return NextResponse.json({ pending: true });
     }
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       direct: true,
       local: state.local!,
     });
-    await writeState({ ...state, updatedAt: new Date().toISOString() });
+    await touchSenderState(phone);
     return NextResponse.json({ saved: path });
   }
 

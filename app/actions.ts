@@ -2,7 +2,7 @@
 
 import { list, del, put } from '@vercel/blob';
 import { revalidatePath } from 'next/cache';
-import { readState, writeState, slugify } from '@/lib/blob-state';
+import { renameLocationEverywhere, slugify } from '@/lib/blob-state';
 
 export async function renameFolderAction(oldName: string, formData: FormData) {
   const rawNewName = formData.get('newName');
@@ -31,11 +31,8 @@ export async function renameFolderAction(oldName: string, formData: FormData) {
     await del(file.url);
   }
 
-  // Se essa pasta era o "local ativo", atualiza a memória também
-  const state = await readState();
-  if (state.local === oldName) {
-    await writeState({ ...state, local: newName });
-  }
+  // Se essa pasta era o "local ativo" de algum número, atualiza a referência
+  await renameLocationEverywhere(oldName, newName);
 
   revalidatePath('/');
 }
