@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'falha ao baixar mídia' }, { status: 502 });
     }
     const buffer = await mediaRes.arrayBuffer();
-    const filename = `${message.id || Date.now()}.${extFromMime(mimeType)}`;
+    const filename = `${phone}_${message.id || Date.now()}.${extFromMime(mimeType)}`;
 
     if (needsQuestion) {
       await saveMedia(buffer, filename, mimeType || 'application/octet-stream', { direct: false });

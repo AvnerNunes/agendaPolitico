@@ -175,6 +175,16 @@ body {
   display: block;
 }
 
+.card-meta .fphone {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
 .card-meta .fdate {
   font-family: var(--font-mono);
   font-size: 0.68rem;

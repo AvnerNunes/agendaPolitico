@@ -11,12 +11,32 @@ function extOf(pathname: string) {
   return parts.length > 1 ? parts.pop()!.toLowerCase() : '';
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('pt-BR', {
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
+}
+
+function formatPhone(phone: string) {
+  // 556195689597 -> +55 61 99568-9597 (aproximado, sem validar DDD/formato exato)
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 10) return `+${digits}`;
+  const country = digits.slice(0, digits.length - 10);
+  const ddd = digits.slice(digits.length - 10, digits.length - 8);
+  const rest = digits.slice(digits.length - 8);
+  const half = Math.ceil(rest.length / 2);
+  return `+${country} ${ddd} ${rest.slice(0, half)}-${rest.slice(half)}`;
+}
+
+/** O robô salva os arquivos como "telefone_id.ext" — extrai o telefone daí, se existir. */
+function parseSender(pathname: string) {
+  const raw = pathname.split('/').pop() || 'arquivo';
+  const match = raw.match(/^(\d{10,15})_(.+)$/);
+  return { raw, senderPhone: match ? match[1] : null };
 }
 
 export default async function Home() {
@@ -78,7 +98,7 @@ export default async function Home() {
               const ext = extOf(file.pathname);
               const isImage = IMAGE_EXT.includes(ext);
               const isVideo = VIDEO_EXT.includes(ext);
-              const displayName = file.pathname.split('/').pop() || 'arquivo';
+              const { raw: displayName, senderPhone } = parseSender(file.pathname);
               const viewUrl = `/api/view?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(displayName)}`;
               const downloadUrl = `/api/view?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(displayName)}&download=1`;
               return (
@@ -91,8 +111,8 @@ export default async function Home() {
                     )}
                   </a>
                   <div className="card-meta">
-                    <span className="fname">{displayName}</span>
-                    <span className="fdate">{formatDate(file.uploadedAt as unknown as string)}</span>
+                    {senderPhone && <span className="fphone">{formatPhone(senderPhone)}</span>}
+                    <span className="fdate">{formatDateTime(file.uploadedAt as unknown as string)}</span>
                   </div>
                   <div className="card-actions">
                     <a href={viewUrl} target="_blank" rel="noreferrer">Abrir</a>
