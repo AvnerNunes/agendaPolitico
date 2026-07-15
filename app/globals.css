@@ -75,6 +75,85 @@ body {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.folder-head .last-sender {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.folder-head-right {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.folder-controls {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.folder-controls button {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.folder-controls button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.folder-edit-form {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex: 1;
+}
+
+.folder-edit-form input {
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+}
+
+.folder-edit-form button {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.delete-file-btn {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.delete-file-btn:hover {
+  color: #d15b5b;
 }
 
 .folder-head .tag .dot {

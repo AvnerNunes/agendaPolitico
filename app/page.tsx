@@ -1,4 +1,6 @@
 import { list } from '@vercel/blob';
+import { FolderControls } from '@/components/FolderControls';
+import { DeleteFileButton } from '@/components/DeleteFileButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,46 +86,62 @@ export default async function Home() {
         </div>
       )}
 
-      {sortedFolders.map(([folderName, files]) => (
-        <section className="folder" key={folderName}>
-          <div className="folder-head">
-            <div className="tag">
-              <span className="dot" aria-hidden="true" />
-              <span className="name">{folderName.replace(/-/g, ' ')}</span>
+      {sortedFolders.map(([folderName, files]) => {
+        const latest = [...files].sort(
+          (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+        )[0];
+        const { senderPhone: latestPhone } = parseSender(latest.pathname);
+
+        return (
+          <section className="folder" key={folderName}>
+            <div className="folder-head">
+              <div className="tag">
+                <span className="dot" aria-hidden="true" />
+                <span className="name">{folderName.replace(/-/g, ' ')}</span>
+                {latestPhone && (
+                  <span className="last-sender">
+                    último envio: {formatPhone(latestPhone)} em {formatDateTime(latest.uploadedAt as unknown as string)}
+                  </span>
+                )}
+              </div>
+              <div className="folder-head-right">
+                <span className="meta">{files.length} arquivos</span>
+                <FolderControls folderName={folderName} />
+              </div>
             </div>
-            <span className="meta">{files.length} arquivos</span>
-          </div>
-          <div className="grid">
-            {files.map((file) => {
-              const ext = extOf(file.pathname);
-              const isImage = IMAGE_EXT.includes(ext);
-              const isVideo = VIDEO_EXT.includes(ext);
-              const { raw: displayName, senderPhone } = parseSender(file.pathname);
-              const viewUrl = `/api/view?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(displayName)}`;
-              const downloadUrl = `/api/view?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(displayName)}&download=1`;
-              return (
-                <div className="card" key={file.pathname}>
-                  <a className="thumb" href={viewUrl} target="_blank" rel="noreferrer">
-                    {isImage ? (
-                      <img src={viewUrl} alt={displayName} loading="lazy" />
-                    ) : (
-                      <span className="glyph">{isVideo ? 'VÍDEO' : ext.toUpperCase() || 'ARQUIVO'}</span>
-                    )}
-                  </a>
-                  <div className="card-meta">
-                    {senderPhone && <span className="fphone">{formatPhone(senderPhone)}</span>}
-                    <span className="fdate">{formatDateTime(file.uploadedAt as unknown as string)}</span>
+            <div className="grid">
+              {files.map((file) => {
+                const ext = extOf(file.pathname);
+                const isImage = IMAGE_EXT.includes(ext);
+                const isVideo = VIDEO_EXT.includes(ext);
+                const { raw: displayName, senderPhone } = parseSender(file.pathname);
+                const viewUrl = `/api/view?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(displayName)}`;
+                const downloadUrl = `/api/view?url=${encodeURIComponent(file.url)}&name=${encodeURIComponent(displayName)}&download=1`;
+                return (
+                  <div className="card" key={file.pathname}>
+                    <a className="thumb" href={viewUrl} target="_blank" rel="noreferrer">
+                      {isImage ? (
+                        <img src={viewUrl} alt={displayName} loading="lazy" />
+                      ) : (
+                        <span className="glyph">{isVideo ? 'VÍDEO' : ext.toUpperCase() || 'ARQUIVO'}</span>
+                      )}
+                    </a>
+                    <div className="card-meta">
+                      {senderPhone && <span className="fphone">{formatPhone(senderPhone)}</span>}
+                      <span className="fdate">{formatDateTime(file.uploadedAt as unknown as string)}</span>
+                    </div>
+                    <div className="card-actions">
+                      <a href={viewUrl} target="_blank" rel="noreferrer">Abrir</a>
+                      <a href={downloadUrl} download={displayName}>Baixar</a>
+                    </div>
+                    <DeleteFileButton url={file.url} filename={displayName} />
                   </div>
-                  <div className="card-actions">
-                    <a href={viewUrl} target="_blank" rel="noreferrer">Abrir</a>
-                    <a href={downloadUrl} download={displayName}>Baixar</a>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
     </main>
   );
 }

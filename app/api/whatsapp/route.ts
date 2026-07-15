@@ -84,11 +84,15 @@ export async function POST(request: NextRequest) {
 
     if (needsQuestion) {
       await saveMedia(buffer, filename, mimeType || 'application/octet-stream', { direct: false });
-      await markAwaiting();
-      const question = state.local
-        ? `As fotos são de ${state.local.replace(/-/g, ' ')} ou é um novo local? Me diga o nome do local.`
-        : 'De que local são essas fotos/vídeos?';
-      await sendWhatsAppText(replyTo, question);
+
+      // Só pergunta se ainda não tiver perguntado (evita repetir a pergunta pra cada mídia do mesmo lote)
+      if (!state.awaiting) {
+        await markAwaiting();
+        const question = state.local
+          ? `As fotos são de ${state.local.replace(/-/g, ' ')} ou é um novo local? Me diga o nome do local.`
+          : 'De que local são essas fotos/vídeos?';
+        await sendWhatsAppText(replyTo, question);
+      }
       return NextResponse.json({ pending: true });
     }
 

@@ -30,7 +30,7 @@ Esse projeto já está conectado ao Vercel. Qualquer `git push` pra branch `main
 Variáveis de ambiente necessárias no Vercel (Settings → Environment Variables):
 - `BLOB_READ_WRITE_TOKEN`
 - `UPLOAD_SECRET`
-- `ALLOWED_PHONE`
+- `ALLOWED_GROUP_ID`
 - `WHAPI_TOKEN`
 
 ## Webhook da Whapi Cloud
