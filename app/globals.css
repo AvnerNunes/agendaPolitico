@@ -54,7 +54,48 @@ body {
   color: var(--text-secondary);
 }
 
-.folder {
+.filters {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filters input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+}
+
+.filters input[type="text"] {
+  flex: 1;
+  min-width: 180px;
+}
+
+.filters input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.filters button {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.filters button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
   margin-bottom: 2.5rem;
   border: 1px solid var(--border);
   border-radius: 10px;

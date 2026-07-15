@@ -23,6 +23,11 @@ export function slugify(text: string) {
     .replace(/(^-|-$)/g, '');
 }
 
+/** Data de "hoje" no fuso de Brasília, no formato YYYY-MM-DD. */
+export function brazilToday() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
 async function readStateMap(): Promise<StateMap> {
   try {
     const response = await get(STATE_PATH, { access: 'private' });
@@ -64,7 +69,7 @@ export async function touchSenderState(phone: string) {
 /** Confirma um novo local pra esse número, e move os arquivos pendentes DELE (só dele). */
 export async function confirmLocation(phone: string, rawLocal: string) {
   const local = slugify(rawLocal);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = brazilToday();
 
   const { blobs: allPending } = await list({ prefix: PENDING_PREFIX });
   const mine = allPending.filter((file) => {
@@ -119,7 +124,7 @@ export async function saveMedia(
   mimeType: string,
   destination: { direct: true; local: string } | { direct: false }
 ) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = brazilToday();
   const path = destination.direct
     ? `${destination.local}/${today}/${filename}`
     : `${PENDING_PREFIX}${Date.now()}-${filename}`;
