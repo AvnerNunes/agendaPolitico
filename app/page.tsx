@@ -122,8 +122,10 @@ export default async function Home() {
                     <a className="thumb" href={viewUrl} target="_blank" rel="noreferrer">
                       {isImage ? (
                         <img src={viewUrl} alt={displayName} loading="lazy" />
+                      ) : isVideo ? (
+                        <video src={viewUrl} muted playsInline preload="metadata" />
                       ) : (
-                        <span className="glyph">{isVideo ? 'VÍDEO' : ext.toUpperCase() || 'ARQUIVO'}</span>
+                        <span className="glyph">{ext.toUpperCase() || 'ARQUIVO'}</span>
                       )}
                     </a>
                     <div className="card-meta">

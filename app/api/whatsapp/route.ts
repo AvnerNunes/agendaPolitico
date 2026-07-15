@@ -54,7 +54,12 @@ export async function POST(request: NextRequest) {
     const { local, movedCount } = await confirmLocation(phone, message.text.body);
     const readable = local.replace(/-/g, ' ');
     const extra = movedCount > 0 ? ` (${movedCount} arquivo${movedCount > 1 ? 's' : ''} organizado${movedCount > 1 ? 's' : ''})` : '';
-    await sendWhatsAppText(replyTo, `Local definido: ${readable} ✅${extra}`, message.id);
+    const siteUrl = process.env.SITE_URL || 'https://agenda-politico.vercel.app';
+    await sendWhatsAppText(
+      replyTo,
+      `Local definido: ${readable} ✅${extra}\n\nVocê pode acompanhar os arquivos no site: ${siteUrl}`,
+      message.id
+    );
     return NextResponse.json({ ok: true, local, movedCount });
   }
 
